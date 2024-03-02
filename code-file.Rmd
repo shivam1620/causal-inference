@@ -1,0 +1,221 @@
+---
+title: "final_code"
+output: pdf_document
+date: "2023-04-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this
+
+```{r}
+library(rgenoud)
+library(Matching)
+```
+
+```{r}
+mydata <- read.csv('C:\\Users\\Chirag\\Documents\\datafinal.csv')
+head(mydata)
+control <- mydata[mydata$treat==0,]
+head(control)
+treatment <- mydata[mydata$treat==1,]
+head(treatment)
+```
+
+```{r}
+# PROPENSITY SCORE MATCHING 
+propensity_model <- glm(treat ~ gender + age + cbct + sagittal + Tongue, family = binomial(), data=mydata)
+summary(propensity_model)
+```
+
+```{r}
+mydata$propensity <- predict(propensity_model, type = "response")
+```
+
+```{r}
+X <- cbind(mydata$gender, mydata$age, mydata$cbct, mydata$sagittal, mydata$Tongue)
+mout_p <- Match(Tr = mydata$treat, X = X, estimand = "ATT", M=1)
+summary(mout_p)
+
+```
+
+```{r}
+mb <- MatchBalance(mydata$treat ~ X, match.out=mout_p)
+summary(mb)
+```
+
+```{r}
+hist(mydata$propensity[mydata$treat==0],main="Propensity scores pre-matching for control group", xlab = "Propensity score", ylab="Density",xlim=c(0.20,0.5))
+hist(mydata$propensity[mydata$treat==1],main="Propensity scores pre-matching for treatment group", xlab = "Propensity score", ylab="Density",xlim=c(0.20,0.5))
+
+hist(mydata$propensity[mout$index.control],main="Propensity scores post-matching for control group", xlab = "Propensity score", ylab="Density",xlim=c(0.20,0.5))
+hist(mydata$propensity[mout$index.treated],main="Propensity scores post-matching for treatment group", xlab = "Propensity score", ylab="Density",xlim=c(0.20,0.5))
+```
+
+```{r}
+#Comparision with Genetic matching
+genout1 <- GenMatch(Tr = mydata$treat, X = X, estimand = "ATT", pop.size=50, max.generations=100, wait.generations=10)
+mout_gen1 <- Match(Tr = mydata$treat, X = X, estimand = "ATT", Weight.matrix = genout1)
+summary(mout_gen1)
+```
+
+```{r}
+mb_gen1 <- MatchBalance(mydata$treat ~ X, match.out=mout_gen1)
+```
+
+We Need :
+
+1.  Age, 2. Gender, 3. Saggital, 4. Tongue, 5. CBCT
+
+```{r}
+cat("Mean Age Treated P", mean(mydata$age[mout_p$index.treated]), "\n")
+cat("Mean Age Control P", mean(mydata$age[mout_p$index.control]), "\n")
+cat("Mean CBCT Treated P", mean(mydata$cbct[mout_p$index.treated]), "\n")
+cat("Mean CBCT Control P", mean(mydata$cbct[mout_p$index.control]), "\n")
+cat('Gender Treatment P', table(mydata$gender[mout_p$index.treated]), "\n")
+cat('Gender Control P', table(mydata$gender[mout_p$index.control]), "\n")
+cat('Sagittal Treatment P', table(mydata$sagittal[mout_p$index.treated]), "\n")
+cat('Sagittal Control P', table(mydata$sagittal[mout_p$index.control]), "\n")
+cat('Tongue Treatment P', table(mydata$Tongue[mout_p$index.treated]), "\n")
+cat('Tongue Control P', table(mydata$Tongue[mout_p$index.control]), "\n")
+
+
+cat("Mean Age Treated G", mean(mydata$age[mout_gen1$index.treated]), "\n")
+cat("Mean Age Control G", mean(mydata$age[mout_gen1$index.control]), "\n")
+cat("Mean CBCT Treated G", mean(mydata$cbct[mout_gen1$index.treated]), "\n")
+cat("Mean CBCT Control G", mean(mydata$cbct[mout_gen1$index.control]), "\n")
+cat('Gender Treatment G', table(mydata$gender[mout_gen1$index.treated]), "\n")
+cat('Gender Control G', table(mydata$gender[mout_gen1$index.control]), "\n")
+cat('Sagittal Treatment G', table(mydata$sagittal[mout_gen1$index.treated]), "\n")
+cat('Sagittal Control G', table(mydata$sagittal[mout_gen1$index.control]), "\n")
+cat('Tongue Treatment G', table(mydata$Tongue[mout_gen1$index.treated]), "\n")
+cat('Tongue Control G', table(mydata$Tongue[mout_gen1$index.control]), "\n")
+
+
+cat("Mean Age Treated Wm", mean(treatment$age), "\n")
+cat("Mean Age Control Wm", mean(control$age), "\n")
+cat("Mean CBCT Treated Wm", mean(treatment$cbct), "\n")
+cat("Mean CBCT Control Wm", mean(control$cbct), "\n")
+cat('Gender Treatment Wm', table(treatment$gender), "\n")
+cat('Gender Control Wm', table(control$gender), "\n")
+cat('Sagittal Treatment Wm', table(treatment$sagittal), "\n")
+cat('Sagittal Control Wm', table(control$sagittal), "\n")
+cat('Tongue Treatment Wm', table(treatment$Tongue), "\n")
+cat('Tongue Control Wm', table(control$Tongue), "\n")
+```
+
+```{r}
+hist(mydata$propensity[mydata$treat==0],main="Propensity scores pre-matching for control group", xlab = "Propensity score", ylab="Density",xlim=c(0.20,0.5))
+hist(mydata$propensity[mydata$treat==1],main="Propensity scores pre-matching for treatment group", xlab = "Propensity score", ylab="Density",xlim=c(0.20,0.5))
+
+hist(mydata$propensity[mout_gen1$index.control],main="Propensity scores post genetic-matching for control group", xlab = "Propensity score", ylab="Density",xlim=c(0.20,0.5))
+hist(mydata$propensity[mout_gen1$index.treated],main="Propensity scores post genetic-matching for treatment group", xlab = "Propensity score", ylab="Density",xlim=c(0.20,0.5))
+```
+
+```{r}
+
+```
+
+```{r}
+data_2 <- read.csv("C:\\Users\\Chirag\\Documents\\data_final2.csv")
+controlwm <- data_2[data_2$treat==0,]
+treatmentwm <- data_2[data_2$treat==1,]
+```
+
+```{r}
+
+```
+
+```{r}
+X <- cbind(data_2$gender, data_2$age, data_2$cbct, data_2$skeletal, data_2$tongue)
+genout <- GenMatch(Tr = data_2$treat, X = X, estimand = "ATT", pop.size=50, max.generations=20, wait.generations=10)
+mout_gen <- Match(Tr = data_2$treat, X = X, estimand = "ATT", Weight.matrix = genout)
+mb_gen <- MatchBalance(data_2$treat ~ X, match.out=mout_gen)
+
+
+```
+
+```{r}
+
+```
+
+```{r}
+control <- data_2[mout_gen$index.control, ]
+treatment <- data_2[mout_gen$index.treated, ]
+```
+
+```{r}
+print(treatment_p$t1_naso_v)
+```
+
+```{r}
+```
+
+```{r}
+
+```
+
+## Reference for code:
+
+treatment/control wm refers to without matching
+
+In the code cell below, we find that the significance values do improve by a large margin for: 1) retroglossal m and 2) retroglossal v
+
+We also find that the difference in means is also improving a lot after matching. This therefore, leads us to question if there are any other confounding variables which have a role to play. In order to find out, we conduct to linear regressions by building a linear model, and seeing how everything varies.
+
+```{r}
+
+#Nasal
+cat("Nasal")
+print(mean(treatment$t1_naso_v) - mean(control$t1_naso_v))
+print(mean(treatmentwm$t1_naso_v) - mean(controlwm$t1_naso_v))
+
+#Retropla v: Effect Higher post matching; however, t-test shows that the p-value 
+cat("Retroplattal Volume")
+print(mean(treatment$t1_retrpl_v) - mean(control$t1_retrpl_v))
+print(mean(treatmentwm$t1_retrpl_v) - mean(controlwm$t1_retrpl_v))
+
+#Effect size decreases post matching, p-value also increases and what was significant in the main paper, does not remain sign now
+cat("Retroplattal MCA")
+print(mean(treatment$t1_retrpl_m) - mean(control$t1_retrpl_m))
+print(mean(treatmentwm$t1_retrpl_m) - mean(controlwm$t1_retrpl_m))
+
+#Retroglossal v: Post matching, p-value gets lowered, and what was insiginificant shows significant effect; we also find that the treatment effect increases by approx 30%
+cat("Retrogl Volume")
+print(mean(treatment$t1_retrgl_v) - mean(control$t1_retrgl_v))
+print(mean(treatmentwm$t1_retrgl_v) - mean(controlwm$t1_retrgl_v))
+
+#Retroglossal m: Post matching, p-value gets lowered, and what was insiginificant shows significant effect; we also find that the treatment effect increases by approx 15%
+cat("Retrogl MCA")
+print(mean(treatment$t1_retrgl_m) - mean(control$t1_retrgl_m))
+print(mean(treatmentwm$t1_retrgl_m) - mean(controlwm$t1_retrgl_m))
+
+cat("Nasal p vals")
+t.test(treatment$t1_naso_v,control$t1_naso_v)
+t.test(treatmentwm$t1_naso_v,controlwm$t1_naso_v)
+
+cat("Retroplattal Volume p vals")
+t.test(treatment$t1_retrpl_v,control$t1_retrpl_v)
+t.test(treatmentwm$t1_retrpl_v,controlwm$t1_retrpl_v)
+
+cat("Retroplattal MCA p vals")
+t.test(treatment$t1_retrpl_m,control$t1_retrpl_m)
+t.test(treatmentwm$t1_retrpl_m,controlwm$t1_retrpl_m)
+
+cat("Retrogl Volume p vals")
+t.test(treatment$t1_retrgl_v,control$t1_retrgl_v)
+t.test(treatmentwm$t1_retrgl_v,controlwm$t1_retrgl_v)
+
+cat("Retrogl MCA p vals")
+t.test(treatment$t1_retrgl_m,control$t1_retrgl_m)
+t.test(treatmentwm$t1_retrgl_m,controlwm$t1_retrgl_m)
+```
+
+```{r}
+```
